@@ -1,0 +1,4 @@
+cache.csv
+entries/*
+*.csv
+*.zip
