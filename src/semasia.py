@@ -42,7 +42,7 @@ def load_entries(directory):
             else: print(f"Couldn't read {filepath}")
     return entries 
 
-entries = load_entries(sys.argv[1])
+#entries = load_entries(sys.argv[1])
 
 #End load entries
 
