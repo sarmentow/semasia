@@ -1,17 +1,8 @@
+from itertools import chain
 import csv
 import os
 import re
 import datetime
-import sys
-
-# Readibility
-
-from rich.console import Console
-from rich.markdown import Markdown as md
-console = Console()
-#print = console.print
-
-# End Readibility
 
 #Load entries
 def entry_create_object(ugly_entry):
@@ -42,8 +33,6 @@ def load_entries(directory):
             else: print(f"Couldn't read {filepath}")
     return entries 
 
-#entries = load_entries(sys.argv[1])
-
 #End load entries
 
 #misc
@@ -53,17 +42,6 @@ def mean(l):
 
 def generic_nth(l, sort_key_func, n):
     return sorted(l, key=sort_key_func, reverse=True)[n]
-
-# I'm not using this for much, performance is mostly ok in my testing. Maybe with more entries this would be necessary, but I don't know how much of a performance boost I would get given the overhead by converting my list into a string in order to use it as a hash
-def memo(f):
-    cache = {}
-    def memoized(n):
-        str_n = str(n)
-        if str_n not in cache:
-             cache[str_n] = f(n)
-        return cache[str_n]
-    return memoized
-        
  
 #End misc
 
@@ -108,12 +86,8 @@ def entries_split_bodies(entries, separator):
 def entries_words(entries):
     words = [] 
     for entry in entries:
-        entry_words = re.compile('\w+').findall(entry['body'].lower())
+        entry_words = re.compile('w+').findall(entry['body'].lower())
         words += entry_words
-    return words
-
-
-
     return words
 
 
@@ -150,7 +124,7 @@ def entries_words_frequencies(entries):
     return frequencies
 
 def entries_nth_most_frequent_word(entries, n=0):
-    return generic_nth(entries_words_frequencies(entries, entries_words_set(entries)).items(), lambda i: i[1], n)
+    return generic_nth(entries_words_frequencies(entries).items(), lambda i: i[1], n)
 
 def field_from_entries(field, entries):
     return [entry[field] for entry in entries]
@@ -225,7 +199,7 @@ def entries_nth_recent(entries, n):
     return generic_nth(entries, lambda entry: entry_date_obj(entry['date']), n)
 
 #TODO instead of doing all this, I could just save in memory the frequency of words from above and access it
-def entries_frequency_query(entries, query):
+def entries_frequency_query(entries, query, exact=False):
     matches = 0
     for entry in entries:
         body = entry['body']
@@ -235,7 +209,7 @@ def entries_frequency_query(entries, query):
         matches += body_matches
     return matches
 
-#TODO create abstraction for common functionality between hiatus and streaks; too tired right now;
+#TODO create abstraction for common abstraction between hiatus and streaks;
 def entries_streaks(entries):
     current_streak = []
     prev_entry = {} 
@@ -304,16 +278,23 @@ def entries_replace_term_by(entries, term, by):
 
     return new_entries
 
+def entry_sentences(entry):
+    paragraphs = [pg for pg in entry['body'].split('\n') if len(pg) > 100]
+    sentences = chain.from_iterable(map(lambda pg: pg.split('.'), paragraphs))
+    sentences = filter(lambda stc: stc != '', sentences)
+    return list(sentences)
+
+
 
 from math import floor
 def generate_report(entries):
-    print(md("# Your journal report:"), style="bold white")
+    print("# Your journal report:")
     total_wordcount = entries_total_wordcount(entries)
     today = d.today()
     this_month_wordcount = entries_total_wordcount(entries_period(entries, d(today.year, today.month, 1), today))
     print(f"You've written {total_wordcount} words on total; {this_month_wordcount} words this month alone!") 
     wordcount, entry_longest = entries_nth_most_words(entries) 
-    print(f"[bold cyan]\"{entry_longest['title']}\"[/bold cyan] is your longest journal entry with {wordcount} words")
+    print(f"\"{entry_longest['title']}\" is your longest journal entry with {wordcount} words")
     mean_wordcount = entries_mean_wordcount(entries)
     print(f"You've written {floor(mean_wordcount)} words per entry on average") 
     mean_wordlength = entries_mean_word_len(entries)
@@ -323,7 +304,7 @@ def generate_report(entries):
     time_start = entries_time_since_start(entries)
     print(f"There are {time_start.days} days between your first entry and your last")
     hiatus = entries_nth_longest_hiatus(entries)
-    print(f"The longest time you've spent without journaling was {hiatus['duration']} days, from [bold cyan]{hiatus['frm']} to {hiatus['to']}[/bold cyan]")
+    print(f"The longest time you've spent without journaling was {hiatus['duration']} days, from {hiatus['frm']} to {hiatus['to']}")
     streak = entries_nth_longest_streak(entries)
-    print(f"The longest you've journalled everyday was {streak['duration']} days, from [bold cyan]{streak['entries'][0]['date']}[/bold cyan] to [bold cyan]{streak['entries'][-1]['date']}[/bold cyan]. Keep going!")
+    print(f"The longest you've journalled everyday was {streak['duration']} days, from {streak['entries'][0]['date']} to {streak['entries'][-1]['date']}. Keep going!")
 

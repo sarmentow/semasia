@@ -4,5 +4,4 @@ entries/*
 *.zip
 src/__pycache__
 src/.ipynb_checkpoints
-src/emotions.ipynb
 
